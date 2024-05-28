@@ -163,6 +163,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     txBufferNG.pre.cmd = cmd;
     if (len > 0 && data)
         memcpy(&txBufferNG.data, data, len);
+        // ich glaube hier werden die daten rein durch das kopieren in den tx buf gesendet. Wahrscheinlich wird an anderer Stelle der bug geleert und an den proxmark gesendet 
 
     if ((g_conn.send_via_fpc_usart && g_conn.send_with_crc_on_fpc) || ((!g_conn.send_via_fpc_usart) && g_conn.send_with_crc_on_usb)) {
         uint8_t first = 0, second = 0;
@@ -184,6 +185,7 @@ static void SendCommandNG_internal(uint16_t cmd, uint8_t *data, size_t len, bool
     }
     print_hex_break((uint8_t *)tx_post, sizeof(PacketCommandNGPostamble), 32);
 #endif
+    // diese var zeigt an dass im buf neue Daten liegen die an den proxmark gesendet werden müssen?
     txBuffer_pending = true;
 
     // tell communication thread that a new command can be send
@@ -637,6 +639,7 @@ __attribute__((force_align_arg_pointer))
                 g_conn.last_command = txBuffer.cmd;
             }
 
+            // here, data has been sent to the proxmark via usb
             txBuffer_pending = false;
 
             // main thread doesn't know send failed...

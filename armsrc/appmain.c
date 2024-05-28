@@ -1618,7 +1618,8 @@ static void PacketReceived(PacketCommandNG *packet) {
             reply_ng(CMD_HF_ISO14443A_SNIFF, PM3_SUCCESS, NULL, 0);
             break;
         }
-        case CMD_HF_ISO14443A_READER: {
+        case CMD_HF_ISO14443A_READER:
+        case CMD_HF_ISO14443A_MARTIN: {
             ReaderIso14443a(packet);
             break;
         }

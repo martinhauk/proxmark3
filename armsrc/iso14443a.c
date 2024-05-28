@@ -35,6 +35,7 @@
 #include "crc16.h"
 #include "protocols.h"
 #include "generator.h"
+#include <stdio.h>
 
 #define MAX_ISO14A_TIMEOUT 524288
 
@@ -2348,7 +2349,7 @@ bool GetIso14443aAnswerFromTag_Thinfilm(uint8_t *receivedResponse,  uint8_t *rec
 
 
 //-----------------------------------------------------------------------------
-// Wait a certain time for tag response
+//  Wait a certain time for tag response
 //  If a response is captured return TRUE
 //  If it takes too long return FALSE
 //-----------------------------------------------------------------------------
@@ -2542,7 +2543,9 @@ static void iso14a_set_ATS_times(const uint8_t *ats) {
     }
 }
 
-
+//----
+// test
+//---
 static int GetATQA(uint8_t *resp, uint8_t *resp_par, iso14a_polling_parameters_t *polling_parameters) {
 #define WUPA_RETRY_TIMEOUT 10
 
@@ -2609,7 +2612,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
     bool do_cascade = 1;
     int cascade_level = 0;
 
-    if (p_card) {
+    if (p_card) { //reset "card" contents to 0
         p_card->uidlen = 0;
         memset(p_card->uid, 0, 10);
         p_card->ats_len = 0;
@@ -2752,10 +2755,11 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             uint8_t bcc = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate BCC
             if (sel_uid[6] != bcc) {
 
-                Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x", cascade_level, sel_uid[6], bcc);
+                // Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x", cascade_level, sel_uid[6], bcc);
+                Dbprintf("There is something, but we couldn't read it!");
 
                 if (hf14aconfig.forcebcc == 0) {
-                    Dbprintf("Aborting");
+                    // Dbprintf("Aborting");
                     return 0;
                 } else if (hf14aconfig.forcebcc == 1) {
                     sel_uid[6] = bcc;
@@ -3063,6 +3067,7 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
     uint8_t buf[PM3_CMD_DATA_SIZE_MIX] = {0x00};
 
+    // going here
     if ((param & ISO14A_CONNECT)) {
         iso14_pcb_blocknum = 0;
         clear_trace();
@@ -3070,10 +3075,13 @@ void ReaderIso14443a(PacketCommandNG *c) {
 
     set_tracing(true);
 
-    if ((param & ISO14A_REQUEST_TRIGGER))
+    if ((param & ISO14A_REQUEST_TRIGGER)){
+        // not going here
         iso14a_set_trigger(true);
+    }
 
     if ((param & ISO14A_CONNECT)) {
+        //going here
         iso14443a_setup(FPGA_HF_ISO14443A_READER_LISTEN);
 
         // notify client selecting status.
@@ -3085,6 +3093,15 @@ void ReaderIso14443a(PacketCommandNG *c) {
                        NULL, card, NULL, true, 0, (param & ISO14A_NO_RATS),
                        (param & ISO14A_USE_CUSTOM_POLLING) ? (iso14a_polling_parameters_t *)cmd : &WUPA_POLLING_PARAMETERS
                    );
+                   
+            // arg0
+                // 0 on nothing seen or error
+                // 2 on tag seen
+                // 3 on error
+            // char buffer[10]; // Make sure the buffer is large enough to hold the string representation 
+            // sprintf(buffer, "%lu", arg0);
+            // Dbprintf((const char*)buffer);
+
             // TODO: Improve by adding a cmd parser pointer and moving it by struct length to allow combining data with polling params
             FpgaDisableTracing();
 
@@ -3108,7 +3125,6 @@ void ReaderIso14443a(PacketCommandNG *c) {
     }
 
     if ((param & ISO14A_RAW)) {
-
         if ((param & ISO14A_APPEND_CRC)) {
             // Don't append crc on empty bytearray...
             if (len > 0) {

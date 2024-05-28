@@ -563,6 +563,7 @@ static int CmdHF14AReader(const char *Cmd) {
 
     if (continuous) {
         PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
+        PrintAndLogEx(INFO, "Hello World!");
     }
 
     int res = PM3_SUCCESS;
@@ -570,9 +571,9 @@ static int CmdHF14AReader(const char *Cmd) {
         clearCommandBuffer();
 
         if ((cm & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) {
-            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
+            SendCommandMIX(CMD_HF_ISO14443A_MARTIN, cm, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
         } else {
-            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
+            SendCommandMIX(CMD_HF_ISO14443A_MARTIN, cm, 0, 0, NULL, 0);
         }
 
         if ((cm & ISO14A_CONNECT) == ISO14A_CONNECT) {
@@ -586,6 +587,7 @@ static int CmdHF14AReader(const char *Cmd) {
             iso14a_card_select_t card;
             memcpy(&card, (iso14a_card_select_t *)resp.data.asBytes, sizeof(iso14a_card_select_t));
 
+            // hier komme ich hin wenn der proxmark eine karte gefunden hat
             /*
                 0: couldn't read
                 1: OK, with ATS
@@ -602,15 +604,16 @@ static int CmdHF14AReader(const char *Cmd) {
 
             if (select_status == 3) {
                 if (!(silent && continuous)) {
-                    PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+                    // PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
+                    PrintAndLogEx(INFO, "There's something, but we couldn't read it!");
 
                     // identify TOPAZ
                     if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
                         PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
                     } else {
-                        PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
+                        // PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
                     }
-                    PrintAndLogEx(NORMAL, "");
+                    // PrintAndLogEx(NORMAL, "");
                 }
                 DropField();
                 res = PM3_ESOFT;
