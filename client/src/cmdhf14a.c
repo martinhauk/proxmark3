@@ -513,7 +513,7 @@ static int CmdHF14AReader(const char *Cmd) {
                   "hf 14a reader -@     -> Continuous mode\n"
                   "hf 14a reader --ecp  -> trigger apple enhanced contactless polling\n"
                   "hf 14a reader --mag  -> trigger apple magsafe polling\n"
-                 );
+                  );
 
     void *argtable[] = {
         arg_param_begin,
@@ -521,19 +521,14 @@ static int CmdHF14AReader(const char *Cmd) {
         arg_lit0("s", "silent", "silent (no messages)"),
         arg_lit0(NULL, "drop", "just drop the signal field"),
         arg_lit0(NULL, "skip", "ISO14443-3 select only (skip RATS)"),
-        arg_lit0(NULL, "ecp", "Use enhanced contactless polling"),
-        arg_lit0(NULL, "mag", "Use Apple magsafe polling"),
-        arg_lit0("@", NULL, "continuous reader mode"),
         arg_param_end
-    };
+        };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
 
     bool disconnectAfter = true;
     if (arg_get_lit(ctx, 1)) {
         disconnectAfter = false;
     }
-
-    bool silent = arg_get_lit(ctx, 2);
 
     uint32_t cm = ISO14A_CONNECT;
     if (arg_get_lit(ctx, 3)) {
@@ -544,43 +539,22 @@ static int CmdHF14AReader(const char *Cmd) {
         cm |= ISO14A_NO_RATS;
     }
 
-    bool use_ecp = arg_get_lit(ctx, 5);
-    bool use_magsafe = arg_get_lit(ctx, 6);
-
-    iso14a_polling_parameters_t *polling_parameters = NULL;
-    iso14a_polling_parameters_t parameters = iso14a_get_polling_parameters(use_ecp, use_magsafe);
-    if (use_ecp || use_magsafe) {
-        cm |= ISO14A_USE_CUSTOM_POLLING;
-        polling_parameters = &parameters;
-    }
-
-    bool continuous = arg_get_lit(ctx, 7);
     CLIParserFree(ctx);
 
     if (disconnectAfter == false) {
         cm |= ISO14A_NO_DISCONNECT;
     }
 
-    if (continuous) {
-        PrintAndLogEx(INFO, "Press " _GREEN_("<Enter>") " to exit");
-    }
-
-    int res = PM3_SUCCESS;
-    do {
+    int successfulReadings = 0;
+    for (int i = 0; i < 100; i++)
+    {
         clearCommandBuffer();
-
-        if ((cm & ISO14A_USE_CUSTOM_POLLING) == ISO14A_USE_CUSTOM_POLLING) {
-            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, (uint8_t *)polling_parameters, sizeof(iso14a_polling_parameters_t));
-        } else {
-            SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
-        }
+        SendCommandMIX(CMD_HF_ISO14443A_READER, cm, 0, 0, NULL, 0);
 
         if ((cm & ISO14A_CONNECT) == ISO14A_CONNECT) {
             PacketResponseNG resp;
             if (WaitForResponseTimeout(CMD_ACK, &resp, 2500) == false) {
                 DropField();
-                res = PM3_ESOFT;
-                goto plot;
             }
 
             iso14a_card_select_t card;
@@ -594,76 +568,21 @@ static int CmdHF14AReader(const char *Cmd) {
             */
             uint64_t select_status = resp.oldarg[0];
 
-            if (select_status == 0) {
-                DropField();
-                res = PM3_ESOFT;
-                goto plot;
+            if (select_status != 0)
+            {
+                // PrintAndLogEx(INFO, "There is something");
+                successfulReadings++;
             }
-
-            if (select_status == 3) {
-                if (!(silent && continuous)) {
-                    PrintAndLogEx(INFO, "Card doesn't support standard iso14443-3 anticollision");
-
-                    // identify TOPAZ
-                    if (card.atqa[1] == 0x0C && card.atqa[0] == 0x00) {
-                        PrintAndLogEx(HINT, "Hint: try " _YELLOW_("`hf topaz info`"));
-                    } else {
-                        PrintAndLogEx(SUCCESS, "ATQA: %02X %02X", card.atqa[1], card.atqa[0]);
-                    }
-                    PrintAndLogEx(NORMAL, "");
-                }
-                DropField();
-                res = PM3_ESOFT;
-                goto plot;
-            }
-
-            if ((card.uidlen == 4) && (card.uid[0] == 0x08)) {
-                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s") " ( random )", sprint_hex(card.uid, card.uidlen));
-            } else {
-                PrintAndLogEx(SUCCESS, " UID: " _GREEN_("%s"), sprint_hex(card.uid, card.uidlen));
-            }
-
-            if (!(silent && continuous)) {
-                PrintAndLogEx(SUCCESS, "ATQA: " _GREEN_("%02X %02X"), card.atqa[1], card.atqa[0]);
-                PrintAndLogEx(SUCCESS, " SAK: " _GREEN_("%02X [%" PRIu64 "]"), card.sak, resp.oldarg[0]);
-
-                if (card.ats_len >= 3) { // a valid ATS consists of at least the length byte (TL) and 2 CRC bytes
-                    if (card.ats_len == card.ats[0] + 2)
-                        PrintAndLogEx(SUCCESS, " ATS: "  _GREEN_("%s"), sprint_hex(card.ats, card.ats[0]));
-                    else {
-                        PrintAndLogEx(SUCCESS, " ATS: [%d] "  _GREEN_("%s"), card.ats_len, sprint_hex(card.ats, card.ats_len));
-                    }
-                }
-                PrintAndLogEx(NORMAL, "");
-            }
-            if ((disconnectAfter == false) && (silent == false)) {
-                PrintAndLogEx(SUCCESS, "Card is selected. You can now start sending commands");
+            else
+            {
+                // PrintAndLogEx(INFO, "No card found");
             }
         }
-plot:
-        if (continuous) {
-            res = handle_hf_plot(false);
-            if (res != PM3_SUCCESS) {
-                PrintAndLogEx(DEBUG, "plot failed");
-            }
-        }
-
-        if (kbd_enter_pressed()) {
-            break;
-        }
-
-    } while (continuous);
-
-    if (disconnectAfter == false) {
-        if (silent == false) {
-            PrintAndLogEx(INFO, "field is on");
-        }
+        DropField();
+        // PrintAndLogEx(INFO, "reading %02X of 100", i);
     }
-
-    if (continuous)
-        return PM3_SUCCESS;
-    else
-        return res;
+    PrintAndLogEx(INFO, "%02i of 100 readings successful", successfulReadings);
+    return PM3_SUCCESS;
 }
 
 static int CmdHF14AInfo(const char *Cmd) {
