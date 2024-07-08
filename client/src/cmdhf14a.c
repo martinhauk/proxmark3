@@ -570,18 +570,18 @@ static int CmdHF14AReader(const char *Cmd) {
 
             if (select_status != 0)
             {
-                // PrintAndLogEx(INFO, "There is something");
+                PrintAndLogEx(INFO, "There is something");
                 successfulReadings++;
             }
             else
             {
-                // PrintAndLogEx(INFO, "No card found");
+                PrintAndLogEx(INFO, "No card found");
             }
         }
         DropField();
-        // PrintAndLogEx(INFO, "reading %02X of 100", i);
+        PrintAndLogEx(INFO, "reading %02X of 100", i);
     }
-    PrintAndLogEx(INFO, "%02i of 100 readings successful", successfulReadings);
+    PrintAndLogEx(INFO, "%03i successes", successfulReadings);
     return PM3_SUCCESS;
 }
 
