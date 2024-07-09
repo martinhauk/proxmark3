@@ -59,9 +59,9 @@ def init_printer():
     
     printer.send_now("G28 Y") #home bed
     print("going home...")
-    time.sleep(15) # wait for homing
+    time.sleep(10) # wait for homing
     
-    printer.send_now("G1 Y230") # go to most front position, should be closest to tag
+    printer.send_now("G1 Y120") # go to most front position, should be closest to tag
     print("going to front...")
     time.sleep(5) #wait for going to front
     
