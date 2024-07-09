@@ -86,7 +86,7 @@ def read_numbers_from_file():
     return strippedLines
 
 def write_to_csv(values):
-    csvStr = ",".join([str(v) for v in values])
+    csvStr = ",".join(values)
     with open(csv_location, 'a') as csv_file:
         csv_file.write(csvStr)
         csv_file.write("\r\n")
@@ -113,7 +113,7 @@ cleanup_printer(printer)
 cleanup_process(pm)
 
 print("writing to file...")
-headers = range(start_distance, end_distance + 1, 1)
+headers = [str(x).zfill(3) for x in range(start_distance, end_distance + 1, 1)]
 write_to_csv(headers)
 numbers = read_numbers_from_file()
 write_to_csv(numbers)
