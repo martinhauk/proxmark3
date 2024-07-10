@@ -2756,7 +2756,7 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
 
                 if (hf14aconfig.forcebcc == 0) {
                     Dbprintf("Aborting");
-                    return 0;
+                    return 4;
                 } else if (hf14aconfig.forcebcc == 1) {
                     sel_uid[6] = bcc;
                 } // else use card BCC
