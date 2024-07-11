@@ -175,6 +175,80 @@ int demodHID(bool verbose) {
     return PM3_SUCCESS;
 }
 
+//by marshmellow (based on existing demod + holiman's refactor)
+//HID Prox demod - FSK RF/50 with preamble of 00011101 (then manchester encoded)
+//print full HID Prox ID and some bit format details if found
+int demodHIDba(bool verbose) {
+    (void) verbose; // unused so far
+
+    // HID simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
+    if (isGraphBitstream()) {
+        convertGraphFromBitstream();
+    }
+
+    //raw fsk demod no manchester decoding no start bit finding just get binary from wave
+    uint32_t hi2 = 0, hi = 0, lo = 0;
+
+    uint8_t *bits = calloc(g_GraphTraceLen, sizeof(uint8_t));
+    if (bits == NULL) {
+        PrintAndLogEx(INFO, "failed to allocate memory");
+        return PM3_EMALLOC;
+    }
+    size_t size = getFromGraphBuffer(bits);
+    if (size == 0) {
+        PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID not enough samples"));
+        free(bits);
+        return PM3_ESOFT;
+    }
+    //get binary from fsk wave
+    int waveIdx = 0;
+    int idx = HIDdemodFSK(bits, &size, &hi2, &hi, &lo, &waveIdx);
+    if (idx < 0) {
+
+        if (idx == -1)
+            PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID not enough samples"));
+        else if (idx == -2)
+            PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID just noise detected"));
+        else if (idx == -3)
+            PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID problem during FSK demod"));
+        else if (idx == -4){
+            // PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID preamble not found"));
+        } else if (idx == -5) {
+            PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID error in Manchester data, size %zu"), size);
+            return PM3_SUCCESS;
+        }
+        else
+            PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID error demoding fsk %d"), idx);
+
+        free(bits);
+        return PM3_ESOFT;
+    }
+
+    setDemodBuff(bits, size, idx);
+    setClockGrid(50, waveIdx + (idx * 50));
+    free(bits);
+
+    if (hi2 == 0 && hi == 0 && lo == 0) {
+        PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID no values found"));
+        return PM3_ESOFT;
+    }
+
+    wiegand_message_t packed = initialize_message_object(hi2, hi, lo, 0);
+    if (HIDTryUnpack(&packed) == false) {
+        printDemodBuff(0, false, false, true);
+    }
+    PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
+
+    PrintAndLogEx(INFO, "DEBUG: HID idx: %d, Len: %zu, Printing DemodBuffer: ", idx, size);
+    if (g_debugMode) {
+        PrintAndLogEx(INFO, "raw: " _GREEN_("%08x%08x%08x"), hi2, hi, lo);
+
+        printDemodBuff(0, false, false, false);
+    }
+
+    return PM3_SUCCESS;
+}
+
 static int CmdHIDDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf hid demod",

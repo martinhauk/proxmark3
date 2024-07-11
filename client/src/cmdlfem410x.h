@@ -23,10 +23,12 @@
 
 int CmdLFEM410X(const char *Cmd);
 
+int demodEM410xba(bool verbose);
 int demodEM410x(bool verbose);
 void printEM410x(uint32_t hi, uint64_t id, bool verbose, int type);
 
 int AskEm410xDecode(bool verbose, uint32_t *hi, uint64_t *lo);
+int AskEm410xDemodba(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose);
 int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose);
 
 #endif

@@ -24,5 +24,6 @@
 int CmdLFHID(const char *Cmd);
 
 int demodHID(bool verbose);
+int demodHIDba(bool verbose);
 
 #endif

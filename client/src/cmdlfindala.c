@@ -341,6 +341,164 @@ int demodIndalaEx(int clk, int invert, int maxErr, bool verbose) {
     return PM3_SUCCESS;
 }
 
+int demodIndalaba(bool verbose) {
+    return demodIndalaExba(0, 0, 100, verbose);
+}
+
+
+
+// Indala 26 bit decode
+// by marshmellow, martinbeier
+// optional arguments - same as PSKDemod (clock & invert & maxerr)
+int demodIndalaExba(int clk, int invert, int maxErr, bool verbose) {
+    (void) verbose; // unused so far
+    int ans = PSKDemod(clk, invert, maxErr, true);
+    if (ans != PM3_SUCCESS) {
+        PrintAndLogEx(DEBUG, "DEBUG: Error - Indala can't demod signal: %d", ans);
+        return PM3_ESOFT;
+    }
+
+    uint8_t inv = 0;
+    size_t size = g_DemodBufferLen;
+    int idx = detectIndala(g_DemodBuffer, &size, &inv);
+    if (idx < 0) {
+        if (idx == -1)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: not enough samples");
+        else if (idx == -2)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: only noise found");
+        else if (idx == -4)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: preamble not found");
+        else if (idx == -5)
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: size not correct: %zu", size);
+        else
+            PrintAndLogEx(DEBUG, "DEBUG: Error - Indala: error demoding psk idx: %d", idx);
+        return PM3_ESOFT;
+    }
+    setDemodBuff(g_DemodBuffer, size, idx);
+    setClockGrid(g_DemodClock, g_DemodStartIdx + (idx * g_DemodClock));
+
+    //convert UID to HEX
+    uint32_t uid1 = bytebits_to_byte(g_DemodBuffer, 32);
+    uint32_t uid2 = bytebits_to_byte(g_DemodBuffer + 32, 32);
+    // To be checked, what's this internal ID ?
+    // foo is only used for 64b ids and in that case uid1 must be only preamble, plus the following code is wrong as x<<32 & 0x1FFFFFFF is always zero
+    //uint64_t foo = (((uint64_t)uid1 << 32) & 0x1FFFFFFF) | (uid2 & 0x7FFFFFFF);
+    uint64_t foo = uid2 & 0x7FFFFFFF;
+
+    // to reduce false_positives
+    // let's check the ratio of zeros in the demod buffer.
+    size_t cnt_zeros = 0;
+    for (size_t i = 0; i < g_DemodBufferLen; i++) {
+        if (g_DemodBuffer[i] == 0x00)
+            ++cnt_zeros;
+    }
+
+    // if more than 95% zeros in the demodbuffer then assume its wrong
+    int32_t stats = (int32_t)((cnt_zeros * 100 / g_DemodBufferLen));
+    if (stats > 95) {
+        // return PM3_ESOFT;
+    }
+
+    if (g_DemodBufferLen == 64) {
+        PrintAndLogEx(SUCCESS, "Indala (len %zu)  Raw: " _GREEN_("%x%08x"), g_DemodBufferLen, uid1, uid2);
+
+        uint16_t p1  = 0;
+        p1 |= g_DemodBuffer[32 + 3] << 8;
+        p1 |= g_DemodBuffer[32 + 6] << 5;
+        p1 |= g_DemodBuffer[32 + 8] << 4;
+        p1 |= g_DemodBuffer[32 + 9] << 3;
+        p1 |= g_DemodBuffer[32 + 11] << 1;
+        p1 |= g_DemodBuffer[32 + 16] << 6;
+        p1 |= g_DemodBuffer[32 + 19] << 7;
+        p1 |= g_DemodBuffer[32 + 20] << 10;
+        p1 |= g_DemodBuffer[32 + 21] << 2;
+        p1 |= g_DemodBuffer[32 + 22] << 0;
+        p1 |= g_DemodBuffer[32 + 24] << 9;
+
+        uint8_t fc = 0;
+        fc |= g_DemodBuffer[57] << 7; // b8
+        fc |= g_DemodBuffer[49] << 6; // b7
+        fc |= g_DemodBuffer[44] << 5; // b6
+        fc |= g_DemodBuffer[47] << 4; // b5
+        fc |= g_DemodBuffer[48] << 3; // b4
+        fc |= g_DemodBuffer[53] << 2; // b3
+        fc |= g_DemodBuffer[39] << 1; // b2
+        fc |= g_DemodBuffer[58] << 0; // b1
+
+        uint16_t csn = 0;
+        csn |= g_DemodBuffer[42] << 15; // b16
+        csn |= g_DemodBuffer[45] << 14; // b15
+        csn |= g_DemodBuffer[43] << 13; // b14
+        csn |= g_DemodBuffer[40] << 12; // b13
+        csn |= g_DemodBuffer[52] << 11; // b12
+        csn |= g_DemodBuffer[36] << 10; // b11
+        csn |= g_DemodBuffer[35] << 9; // b10
+        csn |= g_DemodBuffer[51] << 8; // b9
+        csn |= g_DemodBuffer[46] << 7; // b8
+        csn |= g_DemodBuffer[33] << 6; // b7
+        csn |= g_DemodBuffer[37] << 5; // b6
+        csn |= g_DemodBuffer[54] << 4; // b5
+        csn |= g_DemodBuffer[56] << 3; // b4
+        csn |= g_DemodBuffer[59] << 2; // b3
+        csn |= g_DemodBuffer[50] << 1; // b2
+        csn |= g_DemodBuffer[41] << 0; // b1
+
+        uint8_t parity = 0;
+        parity |= g_DemodBuffer[34] << 1; // b2
+        parity |= g_DemodBuffer[38] << 0; // b1
+
+        uint8_t checksum = 0;
+        checksum |= g_DemodBuffer[62] << 1; // b2
+        checksum |= g_DemodBuffer[63] << 0; // b1
+
+        PrintAndLogEx(SUCCESS, "Fmt " _GREEN_("26") " FC: " _GREEN_("%u") " Card: " _GREEN_("%u") " Parity: " _GREEN_("%1d%1d")
+                      , fc
+                      , csn
+                      , parity >> 1 & 0x01
+                      , parity & 0x01
+                     );
+        PrintAndLogEx(DEBUG, "two bit checksum... " _GREEN_("%1d%1d"), checksum >> 1 & 0x01, checksum & 0x01);
+
+        PrintAndLogEx(INFO, "");
+        PrintAndLogEx(SUCCESS, "Possible de-scramble patterns");
+        // This doesn't seem to line up with the hot-stamp numbers on any HID cards I have seen, but, leaving it alone since I do not know how those work. -MS
+        PrintAndLogEx(SUCCESS, "  Printed....... __%04d__  ( 0x%X )", p1, p1);
+        PrintAndLogEx(SUCCESS, "  Internal ID... %" PRIu64, foo);
+        decodeHeden2L(g_DemodBuffer);
+
+    } else {
+
+        if (g_DemodBufferLen != 224) {
+            PrintAndLogEx(INFO, "Odd size,  false positive?");
+        }
+
+        uint32_t uid3 = bytebits_to_byte(g_DemodBuffer + 64, 32);
+        uint32_t uid4 = bytebits_to_byte(g_DemodBuffer + 96, 32);
+        uint32_t uid5 = bytebits_to_byte(g_DemodBuffer + 128, 32);
+        uint32_t uid6 = bytebits_to_byte(g_DemodBuffer + 160, 32);
+        uint32_t uid7 = bytebits_to_byte(g_DemodBuffer + 192, 32);
+        PrintAndLogEx(
+            SUCCESS
+            , "Indala (len %zu)  Raw: " _GREEN_("%x%08x%08x%08x%08x%08x%08x")
+            , g_DemodBufferLen
+            , uid1
+            , uid2
+            , uid3
+            , uid4
+            , uid5
+            , uid6
+            , uid7
+        );
+    }
+
+    if (g_debugMode) {
+        PrintAndLogEx(DEBUG, "DEBUG: Indala - printing DemodBuffer");
+        printDemodBuff(0, false, false, false);
+    }
+    PrintAndLogEx(NORMAL, "");
+    return PM3_SUCCESS;
+}
+
 int demodIndala(bool verbose) {
     return demodIndalaEx(0, 0, 100, verbose);
 }
