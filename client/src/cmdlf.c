@@ -1646,14 +1646,12 @@ int CmdLFfind(const char *Cmd) {
         arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
         arg_lit0("c", NULL, "Continue searching after successful match"),
         arg_lit0("u", NULL, "Search for unknown tags"),
-        arg_lit0("@", NULL, "Continuous mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_gb = arg_get_lit(ctx, 1);
     bool search_cont = arg_get_lit(ctx, 2);
     bool search_unk = arg_get_lit(ctx, 3);
-    bool continous = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     int retval = PM3_SUCCESS;
@@ -1804,10 +1802,6 @@ success:
     if (found) {
         successfulReadings++;
         PrintAndLogEx(SUCCESS, "successful reading no. %03d", successfulReadings);
-    }
-
-    if(continous && kbd_enter_pressed()){
-        break;
     }
 
     }
