@@ -1645,13 +1645,11 @@ int CmdLFfind(const char *Cmd) {
         arg_param_begin,
         arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
         arg_lit0("c", NULL, "Continue searching after successful match"),
-        arg_lit0("u", NULL, "Search for unknown tags"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_gb = arg_get_lit(ctx, 1);
     bool search_cont = arg_get_lit(ctx, 2);
-    bool search_unk = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     int retval = PM3_SUCCESS;
