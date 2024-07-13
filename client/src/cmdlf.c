@@ -1671,13 +1671,6 @@ int CmdLFfind(const char *Cmd) {
     if (search_cont) {
         PrintAndLogEx(INFO, "Continue searching after successful match");
     }
-
-    // ask / man
-    if (demodEM410x(true) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!");
-        found = true;
-        goto success;
-    }
     // fsk
     if (demodHID(true) == PM3_SUCCESS) {
         PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!");
@@ -1765,19 +1758,15 @@ int CmdLFfindBaAdpt(const char *Cmd) {
         found = true;
         goto success;
     }
-    if (demodIndalaba(true) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");
-        found = true;
-        goto success;
-    }
 
     if (found == 0) {
         retval = PM3_ESOFT;
     }
 
     // identify chipset
-    if (check_chiptype(is_online) == false) {
-        PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+    if (check_chiptype(is_online)) {
+        found = true;
+        goto success;
     }
 
 success: 

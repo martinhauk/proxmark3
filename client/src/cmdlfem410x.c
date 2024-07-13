@@ -307,22 +307,6 @@ int AskEm410xDemod(int clk, int invert, int maxErr, size_t maxLen, bool amplify,
     return AskEm410xDecode(verbose, hi, lo);
 }
 
-int AskEm410xDemodba(int clk, int invert, int maxErr, size_t maxLen, bool amplify, uint32_t *hi, uint64_t *lo, bool verbose) {
-    bool st = true;
-
-    // em410x simulation etc uses 0/1 as signal data. This must be converted in order to demod it back again
-    if (isGraphBitstream()) {
-        
-        PrintAndLogEx(SUCCESS, "\nin graphbitstream");
-        convertGraphFromBitstream();
-    }
-    if (ASKDemod_ext(clk, invert, maxErr, maxLen, amplify, false, false, 1, &st) != PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nin oher");
-        return PM3_SUCCESS;
-    }
-    return AskEm410xDecode(verbose, hi, lo);
-}
-
 // this read loops on device side.
 // uses the demod in lfops.c
 static int CmdEM410xWatch(const char *Cmd) {
@@ -361,7 +345,7 @@ int demodEM410xba(bool verbose) {
     (void) verbose; // unused so far
     uint32_t hi = 0;
     uint64_t lo = 0;
-    return AskEm410xDemodba(0, 0, 100, 0, false, &hi, &lo, true);
+    return AskEm410xDemod(0, 0, 100, 0, true, &hi, &lo, true);
 }
 
 static int CmdEM410xDemod(const char *Cmd) {

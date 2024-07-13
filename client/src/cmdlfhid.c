@@ -209,10 +209,12 @@ int demodHIDba(bool verbose) {
             PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID not enough samples"));
         else if (idx == -2)
             PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID just noise detected"));
-        else if (idx == -3)
+        else if (idx == -3){
             PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID problem during FSK demod"));
+            return PM3_SUCCESS;
+        }
         else if (idx == -4){
-            // PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID preamble not found"));
+            PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID preamble not found"));
         } else if (idx == -5) {
             PrintAndLogEx(INFO, "DEBUG: Error - " _RED_("HID error in Manchester data, size %zu"), size);
             return PM3_SUCCESS;
