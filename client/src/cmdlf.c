@@ -1692,102 +1692,6 @@ int CmdLFfind(const char *Cmd) {
         goto success;
     }
 
-
-    if (search_unk) {
-
-        // test unknown tag formats (raw mode)
-        PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
-
-        uint8_t ones[] = {
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        };
-
-        // FSK
-        PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
-        int clock = GetFskClock("", false);
-        if (clock) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                check_autocorrelate("FSK", clock);
-                found = true;
-            } else {
-                PrintAndLogEx(INFO, "FSK demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        // ASK
-        PrintAndLogEx(INFO, "ASK clock.......... " NOLF);
-        clock = GetAskClock("", false);
-        if (clock && clock > 8) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            bool st = true;
-            if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
-                PrintAndLogEx(INFO, "   could also be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
-                check_autocorrelate("ASK", clock);
-                found = true;
-            } else {
-                PrintAndLogEx(INFO, "ASK demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        // NZR
-        PrintAndLogEx(INFO, "NRZ clock.......... " NOLF);
-        clock = GetNrzClock("", false);
-        if (clock && clock > 8) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            if (NRZrawDemod(0, 0, 0, true) == PM3_SUCCESS) {
-
-                int min = MIN(g_DemodBufferLen, sizeof(ones));
-                // if demodulated binary is only 1,  skip autocorrect
-                if (memcmp(g_DemodBuffer, ones, min) != 0) {
-                    check_autocorrelate("NRZ", clock);
-                    found = true;
-                } else {
-                    PrintAndLogEx(INFO, "NRZ ............... " _RED_("false positive"));
-                    PrintAndLogEx(NORMAL, "");
-                }
-            } else {
-                PrintAndLogEx(INFO, "NRZ demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        // PSK
-        PrintAndLogEx(INFO, "PSK clock.......... " NOLF);
-        clock = GetPskClock("", false);
-        if (clock) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Possible " _GREEN_("PSK1") " modulation detected!");
-                PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
-                PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
-                PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
-                check_autocorrelate("PSK", clock);
-                found = true;
-            } else {
-                PrintAndLogEx(INFO, "PSK demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        if (found == 0) {
-                PrintAndLogEx(FAILED, _RED_("Failed to demodulate signal"));
-        }
-    }
-
     if (found == 0) {
         retval = PM3_ESOFT;
     }
@@ -1810,30 +1714,25 @@ success:
     return retval;
 }
 
-int CmdLFfindBa(const char *Cmd) {
+int CmdLFfindBaAdpt(const char *Cmd) {
 
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf search",
                   "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
                   "lf search       -> try reading data from tag & search for known tag\n"
-                  "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
                   "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
-                  "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
+                  "lf search -1uc  -> use data from the GraphBuffer & search for known tags\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
         arg_lit0("c", NULL, "Continue searching after successful match"),
-        arg_lit0("u", NULL, "Search for unknown tags"),
-        arg_lit0("@", NULL, "Continuous mode"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_gb = arg_get_lit(ctx, 1);
     bool search_cont = arg_get_lit(ctx, 2);
-    bool search_unk = arg_get_lit(ctx, 3);
-    bool continous = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     int retval = PM3_SUCCESS;
@@ -1874,102 +1773,6 @@ int CmdLFfindBa(const char *Cmd) {
         goto success;
     }
 
-
-    if (search_unk) {
-
-        // test unknown tag formats (raw mode)
-        PrintAndLogEx(INFO, _CYAN_("Checking for unknown tags...") "\n");
-
-        uint8_t ones[] = {
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        };
-
-        // FSK
-        PrintAndLogEx(INFO, "FSK clock.......... " NOLF);
-        int clock = GetFskClock("", false);
-        if (clock) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            if (FSKrawDemod(0, 0, 0, 0, true) == PM3_SUCCESS) {
-                check_autocorrelate("FSK", clock);
-                found = true;
-            } else {
-                PrintAndLogEx(INFO, "FSK demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        // ASK
-        PrintAndLogEx(INFO, "ASK clock.......... " NOLF);
-        clock = GetAskClock("", false);
-        if (clock && clock > 8) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            bool st = true;
-            if (ASKDemod_ext(0, 0, 0, 0, false, true, false, 1, &st) == PM3_SUCCESS) {
-                PrintAndLogEx(NORMAL, "");
-                PrintAndLogEx(INFO, _GREEN_("ASK") " modulation / Manchester encoding detected!");
-                PrintAndLogEx(INFO, "   could also be ASK/Biphase - try " _YELLOW_("'data rawdemod --ab'"));
-                check_autocorrelate("ASK", clock);
-                found = true;
-            } else {
-                PrintAndLogEx(INFO, "ASK demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        // NZR
-        PrintAndLogEx(INFO, "NRZ clock.......... " NOLF);
-        clock = GetNrzClock("", false);
-        if (clock && clock > 8) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            if (NRZrawDemod(0, 0, 0, true) == PM3_SUCCESS) {
-
-                int min = MIN(g_DemodBufferLen, sizeof(ones));
-                // if demodulated binary is only 1,  skip autocorrect
-                if (memcmp(g_DemodBuffer, ones, min) != 0) {
-                    check_autocorrelate("NRZ", clock);
-                    found = true;
-                } else {
-                    PrintAndLogEx(INFO, "NRZ ............... " _RED_("false positive"));
-                    PrintAndLogEx(NORMAL, "");
-                }
-            } else {
-                PrintAndLogEx(INFO, "NRZ demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        // PSK
-        PrintAndLogEx(INFO, "PSK clock.......... " NOLF);
-        clock = GetPskClock("", false);
-        if (clock) {
-            PrintAndLogEx(NORMAL, _GREEN_("detected"));
-            if (CmdPSK1rawDemod("") == PM3_SUCCESS) {
-                PrintAndLogEx(INFO, "Possible " _GREEN_("PSK1") " modulation detected!");
-                PrintAndLogEx(INFO, "    Could also be PSK2 - try " _YELLOW_("'data rawdemod --p2'"));
-                PrintAndLogEx(INFO, "    Could also be PSK3 - [currently not supported]");
-                PrintAndLogEx(INFO, "    Could also be  NRZ - try " _YELLOW_("'data rawdemod --nr"));
-                check_autocorrelate("PSK", clock);
-                found = true;
-            } else {
-                PrintAndLogEx(INFO, "PSK demodulation... " _RED_("failed"));
-            }
-        } else {
-            PrintAndLogEx(NORMAL, _RED_("no"));
-        }
-
-        if (found == 0) {
-                PrintAndLogEx(FAILED, _RED_("Failed to demodulate signal"));
-        }
-    }
-
     if (found == 0) {
         retval = PM3_ESOFT;
     }
@@ -1984,10 +1787,6 @@ success:
     if (found) {
         successfulReadings++;
         PrintAndLogEx(SUCCESS, "successful reading no. %03d", successfulReadings);
-    }
-
-    if(continous && kbd_enter_pressed()){
-        break;
     }
 
     }
@@ -2033,7 +1832,8 @@ static command_t CommandTable[] = {
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
     {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag"},
-    {"searchba",    CmdLFfindBa,        AlwaysAvailable, "Read and Search for valid known tag"},
+    {"searchbaorg", CmdLFfindBaAdpt,        AlwaysAvailable, "Read and Search for valid known tag"},
+    {"searchbaadpt",CmdLFfindBaAdpt,        AlwaysAvailable, "Read and Search for valid known tag"},
     {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer"},
     {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("ASK") " tag"},
     {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("FSK") " tag"},
