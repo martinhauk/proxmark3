@@ -2118,6 +2118,7 @@ success:
 
     }
     PrintAndLogEx(INFO, "%03i successes", successfulReadings);
+    PrintAndLogEx(INFO, "ba done");
 
     return retval;
 }
@@ -2195,6 +2196,7 @@ success:
 
     }
     PrintAndLogEx(INFO, "%03i successes", successfulReadings);
+    PrintAndLogEx(INFO, "ba done");
 
     return retval;
 }
