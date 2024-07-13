@@ -909,9 +909,10 @@ static int CmdHF14AReaderBaOriginal(const char *Cmd) {
             }
         }
         DropField();
-        PrintAndLogEx(INFO, "reading %02X of 100", i);
+        PrintAndLogEx(INFO, "reading %02i of 100", i);
     }
     PrintAndLogEx(INFO, "%03i successes", successfulReadings);
+    PrintAndLogEx(INFO, "ba done");
     return PM3_SUCCESS;
 }
 static int CmdHF14AReaderBaAdapted(const char *Cmd) {
@@ -992,6 +993,7 @@ static int CmdHF14AReaderBaAdapted(const char *Cmd) {
         PrintAndLogEx(INFO, "reading %02X of 100", i);
     }
     PrintAndLogEx(INFO, "%03i successes", successfulReadings);
+    PrintAndLogEx(INFO, "ba done");
     return PM3_SUCCESS;
 }
 
