@@ -2088,14 +2088,15 @@ int CmdLFfindBaOrg(const char *Cmd) {
     if (search_cont) {
         PrintAndLogEx(INFO, "Continue searching after successful match");
     }
-    // fsk
-    if (demodHID(true) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!");
+    // ask / man
+    if (demodEM410x(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");
         found = true;
         goto success;
     }
-    if (demodIndala(true) == PM3_SUCCESS) {
-        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");
+    // fsk
+    if (demodHID(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!");
         found = true;
         goto success;
     }
