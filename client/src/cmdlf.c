@@ -2056,22 +2056,25 @@ int CmdLFfindBaOrg(const char *Cmd) {
                   "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
                   "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
+                  "lf search -l  -> 100, sonst 10\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
         arg_lit0("c", NULL, "Continue searching after successful match"),
+        arg_lit0("l", NULL, "100"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_gb = arg_get_lit(ctx, 1);
     bool search_cont = arg_get_lit(ctx, 2);
+    bool l = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     int retval = PM3_SUCCESS;
     int successfulReadings = 0;
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < (l ? 100 : 10); i++)
     {
         PrintAndLogEx(FAILED, "%d", i);
     bool found = false;
@@ -2132,22 +2135,25 @@ int CmdLFfindBaAdpt(const char *Cmd) {
                   "lf search       -> try reading data from tag & search for known tag\n"
                   "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -1uc  -> use data from the GraphBuffer & search for known tags\n"
+                  "lf search -l  -> 100, sonst 10\n"
                  );
 
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
         arg_lit0("c", NULL, "Continue searching after successful match"),
+        arg_lit0("l", NULL, "100"),
         arg_param_end
     };
     CLIExecWithReturn(ctx, Cmd, argtable, true);
     bool use_gb = arg_get_lit(ctx, 1);
     bool search_cont = arg_get_lit(ctx, 2);
+    bool l = arg_get_lit(ctx, 3);
     CLIParserFree(ctx);
 
     int retval = PM3_SUCCESS;
     int successfulReadings = 0;
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < (l ? 100 : 10); i++)
     {
         PrintAndLogEx(FAILED, "%d", i);
     bool found = false;
