@@ -341,6 +341,13 @@ int demodEM410x(bool verbose) {
     return AskEm410xDemod(0, 0, 100, 0, false, &hi, &lo, true);
 }
 
+int demodEM410xba(bool verbose) {
+    (void) verbose; // unused so far
+    uint32_t hi = 0;
+    uint64_t lo = 0;
+    return AskEm410xDemod(0, 0, 100, 0, true, &hi, &lo, true);
+}
+
 static int CmdEM410xDemod(const char *Cmd) {
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf em 410x demod",

@@ -2752,11 +2752,11 @@ int iso14443a_select_cardEx(uint8_t *uid_ptr, iso14a_card_select_t *p_card, uint
             uint8_t bcc = sel_uid[2] ^ sel_uid[3] ^ sel_uid[4] ^ sel_uid[5]; // calculate BCC
             if (sel_uid[6] != bcc) {
 
-                Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x", cascade_level, sel_uid[6], bcc);
+                // Dbprintf("BCC%d incorrect, got 0x%02x, expected 0x%02x", cascade_level, sel_uid[6], bcc);
 
                 if (hf14aconfig.forcebcc == 0) {
-                    Dbprintf("Aborting");
-                    return 0;
+                    // Dbprintf("Aborting");
+                    return 4;
                 } else if (hf14aconfig.forcebcc == 1) {
                     sel_uid[6] = bcc;
                 } // else use card BCC

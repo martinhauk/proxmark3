@@ -1579,7 +1579,7 @@ static bool check_chiptype(bool getDeviceData) {
     }
 #endif
 
-    PrintAndLogEx(INFO, "Couldn't identify a chipset");
+    // PrintAndLogEx(INFO, "Couldn't identify a chipset");
 out:
     restore_buffer8(saveState_db, g_DemodBuffer);
     g_DemodClock = saveState_db.clock;
@@ -1631,7 +1631,6 @@ static int check_autocorrelate(const char *prefix, int clock) {
 }
 
 int CmdLFfind(const char *Cmd) {
-
     CLIParserContext *ctx;
     CLIParserInit(&ctx, "lf search",
                   "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
@@ -1640,7 +1639,6 @@ int CmdLFfind(const char *Cmd) {
                   "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
                   "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
                  );
-
     void *argtable[] = {
         arg_param_begin,
         arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
@@ -1657,13 +1655,11 @@ int CmdLFfind(const char *Cmd) {
     bool is_online = (g_session.pm3_present && (use_gb == false));
     if (is_online)
         lf_read(false, 30000);
-
     size_t min_length = 2000;
     if (g_GraphTraceLen < min_length) {
         PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
         return PM3_ESOFT;
     }
-
     if (search_cont) {
         PrintAndLogEx(INFO, "Continue searching after successful match");
     }
@@ -2051,6 +2047,167 @@ out:
     return retval;
 }
 
+int CmdLFfindBaOrg(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf search",
+                  "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
+                  "lf search       -> try reading data from tag & search for known tag\n"
+                  "lf search -u    -> try reading data from tag & search for known and unknown tag\n"
+                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
+                  "lf search -1uc  -> use data from the GraphBuffer & search for known and unknown tag\n"
+                  "lf search -l  -> 100, sonst 10\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
+        arg_lit0("c", NULL, "Continue searching after successful match"),
+        arg_lit0("l", NULL, "100"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_gb = arg_get_lit(ctx, 1);
+    bool search_cont = arg_get_lit(ctx, 2);
+    bool l = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    int retval = PM3_SUCCESS;
+    int successfulReadings = 0;
+    for (int i = 0; i < (l ? 100 : 10); i++)
+    {
+        PrintAndLogEx(FAILED, "%d", i);
+    bool found = false;
+    bool is_online = (g_session.pm3_present && (use_gb == false));
+    if (is_online)
+        lf_read(false, 30000);
+
+    size_t min_length = 2000;
+    if (g_GraphTraceLen < min_length) {
+        PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
+        return PM3_ESOFT;
+    }
+
+    if (search_cont) {
+        PrintAndLogEx(INFO, "Continue searching after successful match");
+    }
+    // ask / man
+    if (demodEM410x(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("Indala ID") " found!");
+        found = true;
+        goto success;
+    }
+    // fsk
+    if (demodHID(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!");
+        found = true;
+        goto success;
+    }
+
+    if (found == 0) {
+        retval = PM3_ESOFT;
+    }
+
+    // identify chipset
+    if (check_chiptype(is_online) == false) {
+        PrintAndLogEx(DEBUG, "Automatic chip type detection " _RED_("failed"));
+    }
+
+success: 
+
+    if (found) {
+        successfulReadings++;
+        PrintAndLogEx(SUCCESS, "successful reading no. %03d", successfulReadings);
+    }
+
+    }
+    PrintAndLogEx(INFO, "%03i successes", successfulReadings);
+    PrintAndLogEx(INFO, "ba done");
+
+    return retval;
+}
+
+int CmdLFfindBaAdpt(const char *Cmd) {
+
+    CLIParserContext *ctx;
+    CLIParserInit(&ctx, "lf search",
+                  "Read and search for valid known tag. For offline mode, you can `data load` first then search.",
+                  "lf search       -> try reading data from tag & search for known tag\n"
+                  "lf search -1    -> use data from the GraphBuffer & search for known tag\n"
+                  "lf search -1uc  -> use data from the GraphBuffer & search for known tags\n"
+                  "lf search -l  -> 100, sonst 10\n"
+                 );
+
+    void *argtable[] = {
+        arg_param_begin,
+        arg_lit0("1", NULL, "Use data from Graphbuffer to search (offline mode)"),
+        arg_lit0("c", NULL, "Continue searching after successful match"),
+        arg_lit0("l", NULL, "100"),
+        arg_param_end
+    };
+    CLIExecWithReturn(ctx, Cmd, argtable, true);
+    bool use_gb = arg_get_lit(ctx, 1);
+    bool search_cont = arg_get_lit(ctx, 2);
+    bool l = arg_get_lit(ctx, 3);
+    CLIParserFree(ctx);
+
+    int retval = PM3_SUCCESS;
+    int successfulReadings = 0;
+    for (int i = 0; i < (l ? 100 : 10); i++)
+    {
+        PrintAndLogEx(FAILED, "%d", i);
+    bool found = false;
+    bool is_online = (g_session.pm3_present && (use_gb == false));
+    if (is_online)
+        lf_read(false, 30000);
+
+    size_t min_length = 2000;
+    if (g_GraphTraceLen < min_length) {
+        PrintAndLogEx(FAILED, "Data in Graphbuffer was too small.");
+        return PM3_ESOFT;
+    }
+
+    if (search_cont) {
+        PrintAndLogEx(INFO, "Continue searching after successful match");
+    }
+
+    // ask / man
+    if (demodEM410xba(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("EM410x ID") " found!");
+        found = true;
+        goto success;
+    }
+    // fsk
+    if (demodHIDba(true) == PM3_SUCCESS) {
+        PrintAndLogEx(SUCCESS, "\nValid " _GREEN_("HID Prox ID") " found!");
+        found = true;
+        goto success;
+    }
+
+    if (found == 0) {
+        retval = PM3_ESOFT;
+    }
+
+    // identify chipset
+    if (check_chiptype(is_online)) {
+        found = true;
+        goto success;
+    }
+
+success: 
+
+    if (found) {
+        successfulReadings++;
+        PrintAndLogEx(SUCCESS, "successful reading no. %03d", successfulReadings);
+    }
+
+    }
+    PrintAndLogEx(INFO, "%03i successes", successfulReadings);
+    PrintAndLogEx(INFO, "ba done");
+
+    return retval;
+}
+
 static command_t CommandTable[] = {
     {"help",        CmdHelp,            AlwaysAvailable, "This help"},
     {"-----------", CmdHelp,            AlwaysAvailable, "-------------- " _CYAN_("Low Frequency") " --------------"},
@@ -2088,6 +2245,8 @@ static command_t CommandTable[] = {
     {"cmdread",     CmdLFCommandRead,   IfPm3Lf,         "Modulate LF reader field to send command before read"},
     {"read",        CmdLFRead,          IfPm3Lf,         "Read LF tag"},
     {"search",      CmdLFfind,          AlwaysAvailable, "Read and Search for valid known tag"},
+    {"searchbaorg", CmdLFfindBaOrg,        AlwaysAvailable, "Read and Search for valid known tag"},
+    {"searchbaadpt",CmdLFfindBaAdpt,        AlwaysAvailable, "Read and Search for valid known tag"},
     {"sim",         CmdLFSim,           IfPm3Lf,         "Simulate LF tag from buffer"},
     {"simask",      CmdLFaskSim,        IfPm3Lf,         "Simulate " _YELLOW_("ASK") " tag"},
     {"simfsk",      CmdLFfskSim,        IfPm3Lf,         "Simulate " _YELLOW_("FSK") " tag"},

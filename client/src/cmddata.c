@@ -1263,7 +1263,7 @@ int FSKrawDemod(uint8_t rfLen, uint8_t invert, uint8_t fchigh, uint8_t fclow, bo
     //raw fsk demod  no manchester decoding no start bit finding just get binary from wave
     if (getSignalProperties()->isnoise) {
         if (verbose) {
-            PrintAndLogEx(INFO, "signal looks like noise");
+            PrintAndLogEx(INFO, "signal looks like noise1");
         }
         return PM3_ESOFT;
     }
@@ -1366,11 +1366,11 @@ static int CmdFSKrawdemod(const char *Cmd) {
 int PSKDemod(int clk, int invert, int maxErr, bool verbose) {
     if (getSignalProperties()->isnoise) {
         if (verbose) {
-            PrintAndLogEx(INFO, "signal looks like noise");
+            PrintAndLogEx(INFO, "signal looks like noise2");
         }
         return PM3_ESOFT;
     }
-
+    return PM3_SUCCESS;
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
@@ -1379,6 +1379,7 @@ int PSKDemod(int clk, int invert, int maxErr, bool verbose) {
     size_t bitlen = getFromGraphBuffer(bits);
     if (bitlen == 0) {
         free(bits);
+        PrintAndLogEx(FAILED, "bitln 0");
         return PM3_ESOFT;
     }
 
@@ -1400,6 +1401,8 @@ int PSKDemod(int clk, int invert, int maxErr, bool verbose) {
             PrintAndLogEx(DEBUG, "DEBUG: (PSKdemod) errors during Demoding (shown as 7 in bit stream): %d", errCnt);
         }
     }
+    
+        PrintAndLogEx(FAILED, "none");
     //prime g_DemodBuffer for output
     setDemodBuff(bits, bitlen, 0);
     setClockGrid(clk, startIdx);
@@ -1416,11 +1419,11 @@ int NRZrawDemod(int clk, int invert, int maxErr, bool verbose) {
 
     if (getSignalProperties()->isnoise) {
         if (verbose) {
-            PrintAndLogEx(INFO, "signal looks like noise");
+            PrintAndLogEx(INFO, "signal looks like noise3");
         }
         return PM3_ESOFT;
     }
-
+    return PM3_SUCCESS;
     uint8_t *bits = calloc(MAX_GRAPH_TRACE_LEN, sizeof(uint8_t));
     if (bits == NULL) {
         PrintAndLogEx(FAILED, "failed to allocate memory");
